@@ -1,0 +1,5 @@
+set_io clk 35
+
+set_io io_led_r 39
+set_io io_led_g 40
+set_io io_led_b 41
