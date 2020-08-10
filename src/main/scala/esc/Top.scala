@@ -1,11 +1,7 @@
 package esc
 
-import esc.audio._
 import spinal.core._
 import spinal.lib.com.uart._
-import spinal.lib._
-import spinal.lib.com.i2c._
-import spinal.lib.io.InOutWrapper
 
 import sys.process._
 
@@ -15,6 +11,10 @@ class Top extends Component {
       val r = out Bool
       val g = out Bool
       val b = out Bool
+    }
+    val i2c = new Bundle {
+      val sda = inout(Analog(Bool()))
+      val scl = out Bool()
     }
   }
 
@@ -29,14 +29,17 @@ class Top extends Component {
   }
 
   val core = new ClockingArea(clockControl.domain) {
-    val counter = Reg(UInt(32 bits))
+    io.led.r := True
+    io.led.g := True
+    io.led.b := False
 
-    counter := counter + 1
+    val sda = TriStateIO()
+    sda.io.pin := io.i2c.sda
 
-    io.led.r := counter(24)
-    io.led.g := counter(25)
-    io.led.b := counter(28)
-
+    val camera = Amg8833()
+    io.i2c.scl <> camera.io.scl
+    sda.io.write <> camera.io.sda.write
+    sda.io.read <> camera.io.sda.read
   }
 
 }
