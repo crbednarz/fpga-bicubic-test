@@ -12,6 +12,7 @@ object I2cMode extends SpinalEnum {
 case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends Component {
   val io = new Bundle {
     val enable = in Bool
+    val busy = out Bool
     val mode = in(I2cMode())
 
     val write = slave Stream(UInt(8 bits))
@@ -28,6 +29,8 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
 
     val tickHigh = RegNext(False)
     val tickLow = RegNext(False)
+    val tickMid = RegNext(False)
+    val tickChange = tickMid & ~clock
 
     counter := counter - 1
 
@@ -39,31 +42,36 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
       tickLow := clock === True
     }
 
-    def reset = {
-      counter := 0
-      clock := True
-
+    when (counter === divider / 2) {
+      tickMid := True
     }
   }
 
   val mode = Reg(I2cMode())
 
-  val fsm = new StateMachine {
-    val clockEnabled = Reg(Bool()) init(False)
-    val sdaWrite = Reg(Bool()) init(True)
-    val writeStreamReady = RegNext(False)
+  val readFlowValid = RegNext(False)
+  val readData = Reg(UInt(8 bits)) init(0)
+  io.read.valid := readFlowValid
+  io.read.payload := readData
 
-    io.write.ready := writeStreamReady
-    io.scl := timing.clock | ~clockEnabled
-    io.sda.write := sdaWrite
+  val writeStreamReady = RegNext(False)
+  io.write.ready := writeStreamReady
 
+  val clockOverride = Reg(Bool()) init(True)
+  val clockOverrideValue = Reg(Bool()) init(True)
+  io.scl := Mux(clockOverride, clockOverrideValue, timing.clock)
+
+  val sdaWrite = Reg(Bool()) init(True)
+  io.sda.write := sdaWrite
+
+  val i2cFsm = new StateMachine {
     val writeData = Reg(UInt(8 bits)) init(0)
     val bitCounter = Reg(UInt(8 bits)) init(0)
 
-
     val readyState : State = new State with EntryPoint {
       whenIsActive {
-        clockEnabled := False
+        clockOverride := True
+        clockOverrideValue := True
         when (io.enable) {
           mode := io.mode
           goto(startState)
@@ -72,18 +80,23 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
     }
 
     val startState : State = new State {
+      onEntry {
+        sdaWrite := True
+      }
       whenIsActive {
-        when (timing.tickHigh) {
-          clockEnabled := True
-          sdaWrite := False
+        when(mode === I2cMode.WRITE) {
+          writeData := (slaveAddress << 1)
+        } otherwise {
+          writeData := (slaveAddress << 1) | 1
+        }
 
-          when (mode === I2cMode.WRITE) {
-            writeData := (slaveAddress << 1)
-            goto(writeState)
-          } otherwise {
-            writeData := (slaveAddress << 1) | 1
-            goto(writeState)
-          }
+        when (timing.tickMid && timing.clock) {
+          sdaWrite := False
+          clockOverride := False
+        }
+
+        when (timing.tickLow) {
+          goto(writeState)
         }
       }
     }
@@ -93,46 +106,92 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
         bitCounter := 0
       }
       whenIsActive {
-        when (timing.tickLow) {
+        when(timing.tickChange) {
           sdaWrite := writeData(7)
-          writeData := (writeData << 1)(7 downto 0)
+          writeData := writeData(6 downto 0) @@ False
           bitCounter := bitCounter + 1
 
-          when (bitCounter === 7) {
-            goto(ackState)
+          when(bitCounter === 8) {
+            goto(writeAckState)
           }
         }
       }
-
-      val ackState : State = new State {
-        onEntry {
-          sdaWrite := True
-        }
-        whenIsActive {
-          when (timing.tickLow) {
-            when (io.enable) {
+    }
+    val writeAckState : State = new State {
+      onEntry {
+        sdaWrite := True
+      }
+      whenIsActive {
+        when (timing.tickLow) {
+          when (io.enable) {
+            when (mode === I2cMode.WRITE) {
               writeData := io.write.payload
               writeStreamReady := True
               goto(writeState)
             } otherwise {
-              goto(stopState)
+              goto(readState)
             }
-          }
-        }
-      }
-
-      val stopState : State = new State {
-        onEntry {
-          sdaWrite := False
-        }
-        whenIsActive {
-          when (timing.tickLow) {
-            sdaWrite := True
-            goto(readyState)
+          } otherwise {
+            goto(stopState)
           }
         }
       }
     }
 
+    val readState : State = new State {
+      onEntry {
+        bitCounter := 0
+      }
+      whenIsActive {
+        when (timing.tickChange) {
+          sdaWrite := True
+        }
+
+        when (timing.tickHigh) {
+          readData := readData(6 downto 0) @@ io.sda.read
+          bitCounter := bitCounter + 1
+        }
+        when (timing.tickLow && bitCounter === 8) {
+          readFlowValid := True
+          goto(readAckState)
+        }
+      }
+    }
+
+    val readAckState : State = new State {
+      whenIsActive {
+        when (timing.tickChange) {
+          sdaWrite := ~io.enable
+        }
+
+        when (timing.tickLow) {
+          when (io.enable) {
+            goto(readState)
+          } otherwise {
+            goto(stopState)
+          }
+        }
+      }
+    }
+
+    val stopState : State = new State {
+      onEntry {
+        sdaWrite := False
+      }
+      whenIsActive {
+        when (timing.tickChange) {
+          clockOverride := True
+          clockOverrideValue := True
+        }
+        when (timing.tickHigh) {
+          sdaWrite := True
+        }
+        when (timing.tickLow) {
+          goto(readyState)
+        }
+      }
+    }
+
+    io.busy := ~isActive(readyState)
   }
 }
