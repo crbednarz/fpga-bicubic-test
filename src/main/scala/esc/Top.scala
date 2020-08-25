@@ -16,19 +16,21 @@ class Top extends Component {
       val sda = inout(Analog(Bool()))
       val scl = out Bool()
     }
+    val display = out(DisplayIo())
   }
-
+/*
   val clockControl = new Area {
-    val pll = PLL25MHz()
+    val pll = PLL30MHz()
     pll.io.clockIn := ClockDomain.current.readClockWire
     val domain = ClockDomain.internal(
       name = "core",
-      frequency = FixedFrequency(25 MHz)
+      frequency = FixedFrequency(30 MHz)
     )
     domain.clock := pll.io.clockOut
   }
 
-  val core = new ClockingArea(clockControl.domain) {
+  val core = new ClockingArea(clockControl.domain) {*/
+  val core = new Area {
     io.led.r := True
     io.led.g := True
     io.led.b := False
@@ -40,6 +42,9 @@ class Top extends Component {
     io.i2c.scl <> camera.io.scl
     sda.io.write <> camera.io.sda.write
     sda.io.read <> camera.io.sda.read
+
+    val lcd = Display()
+    io.display := lcd.io.display
   }
 
 }

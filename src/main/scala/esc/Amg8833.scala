@@ -38,10 +38,14 @@ case class Amg8833() extends Component {
 
     // FPS -> 10 FPS
     U(2),
+    U(0),
+
+    // INT -> Off
+    U(3),
     U(0)
   ))
 
-  val INIT_PACKET_COUNT = 3
+  val INIT_PACKET_COUNT = 4
 
 
   def bootFsm() = new StateMachine {

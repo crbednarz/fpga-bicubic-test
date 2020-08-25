@@ -30,7 +30,7 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
     val tickHigh = RegNext(False)
     val tickLow = RegNext(False)
     val tickMid = RegNext(False)
-    val tickChange = tickMid & ~clock
+    val tickChange = RegNext(False)
 
     counter := counter - 1
 
@@ -38,12 +38,13 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
       counter := divider
       clock := ~clock
 
-      tickHigh := clock === False
-      tickLow := clock === True
+      tickHigh := ~clock
+      tickLow := clock
     }
 
     when (counter === divider / 2) {
       tickMid := True
+      tickChange := ~clock
     }
   }
 
@@ -61,12 +62,12 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
   val clockOverrideValue = Reg(Bool()) init(True)
   io.scl := Mux(clockOverride, clockOverrideValue, timing.clock)
 
-  val sdaWrite = Reg(Bool()) init(True)
+  val sdaWrite = RegInit(True)
   io.sda.write := sdaWrite
 
   val i2cFsm = new StateMachine {
     val writeData = Reg(UInt(8 bits)) init(0)
-    val bitCounter = Reg(UInt(8 bits)) init(0)
+    val bitCounter = Reg(UInt(4 bits)) init(0)
 
     val readyState : State = new State with EntryPoint {
       whenIsActive {
@@ -111,7 +112,7 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
           writeData := writeData(6 downto 0) @@ False
           bitCounter := bitCounter + 1
 
-          when(bitCounter === 8) {
+          when(bitCounter(3)) {
             goto(writeAckState)
           }
         }
@@ -151,7 +152,7 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
           readData := readData(6 downto 0) @@ io.sda.read
           bitCounter := bitCounter + 1
         }
-        when (timing.tickLow && bitCounter === 8) {
+        when (timing.tickLow && bitCounter(3)) {
           readFlowValid := True
           goto(readAckState)
         }
