@@ -7,9 +7,11 @@ import spinal.lib.io._
 
 case class DisplayIo() extends Bundle {
   val data = UInt(8 bits)
-  val write = Bool()
-  val cd = Bool()
-  val cs = Bool()
+  val write = Bool
+  val read = Bool
+  val cd = Bool
+  val cs = Bool
+  val reset = Bool
 }
 
 
@@ -50,7 +52,7 @@ case class DisplayInitializer() extends Component
     val output = master Stream(DisplayMessage())
     val last = out Bool
   }
-
+  val CMD_NOP = 0x0
   val CMD_SWRESET = 0x1
   val CMD_SETEXTC = 0xB9
   val CMD_SETRGB = 0xB3
@@ -63,7 +65,7 @@ case class DisplayInitializer() extends Component
   val CMD_SETGAMMA = 0xE0
   val CMD_COLMOD = 0x3A
   val CMD_MADCTL = 0x36
-  val CMD_TEON = 0x35
+  val CMD_TEOFF = 0x34
   val CMD_TEARLINE = 0x44
   val CMD_SLPOUT = 0x11
   val CMD_DISPON = 0x29
@@ -72,13 +74,13 @@ case class DisplayInitializer() extends Component
 
 
   val sequence = Mem(DisplayMessage(), initialContent = Array(
+    CommandMessage(CMD_NOP),
     CommandMessage(CMD_SWRESET, True),
     CommandMessage(CMD_SETEXTC),
     DataMessage(0xFF),
     DataMessage(0x83),
     DataMessage(0x57, True),
     CommandMessage(CMD_SETRGB),
-    DataMessage(0x80),
     DataMessage(0x00),
     DataMessage(0x06),
     DataMessage(0x06),
@@ -110,68 +112,21 @@ case class DisplayInitializer() extends Component
     DataMessage(0x2A),
     DataMessage(0x0D),
     DataMessage(0x78),
-    CommandMessage(CMD_SETGAMMA),
-    DataMessage(0x02),
-    DataMessage(0x0A),
-    DataMessage(0x11),
-    DataMessage(0x1d),
-    DataMessage(0x23),
-    DataMessage(0x35),
-    DataMessage(0x41),
-    DataMessage(0x4b),
-    DataMessage(0x4b),
-    DataMessage(0x42),
-    DataMessage(0x3A),
-    DataMessage(0x27),
-    DataMessage(0x1B),
-    DataMessage(0x08),
-    DataMessage(0x09),
-    DataMessage(0x03),
-    DataMessage(0x02),
-    DataMessage(0x0A),
-    DataMessage(0x11),
-    DataMessage(0x1d),
-    DataMessage(0x23),
-    DataMessage(0x35),
-    DataMessage(0x41),
-    DataMessage(0x4b),
-    DataMessage(0x4b),
-    DataMessage(0x42),
-    DataMessage(0x3A),
-    DataMessage(0x27),
-    DataMessage(0x1B),
-    DataMessage(0x08),
-    DataMessage(0x09),
-    DataMessage(0x03),
-    DataMessage(0x00),
-    DataMessage(0x01),
     CommandMessage(CMD_COLMOD),
-    DataMessage(0x55),
+    DataMessage(0x77),
     CommandMessage(CMD_MADCTL),
     DataMessage(0xC0),
-    CommandMessage(CMD_TEON),
+    CommandMessage(CMD_TEOFF),
     DataMessage(0x00),
-    CommandMessage(CMD_TEARLINE),
-    DataMessage(0x00),
-    DataMessage(0x02),
     CommandMessage(CMD_SLPOUT),
     DataMessage(0x00, True),
     CommandMessage(CMD_DISPON),
     DataMessage(0x00, True),
-    CommandMessage(CMD_CASET),
-    DataMessage(0x00),
-    DataMessage(0x00),
-    DataMessage(0x3F),
-    DataMessage(0x01),
-    CommandMessage(CMD_PASET),
-    DataMessage(0x00),
-    DataMessage(0x00),
-    DataMessage(0xDF),
-    DataMessage(0x01)
+    CommandMessage(CMD_NOP)
   ))
 
   val delay = new Area {
-    val TIME = 300 ms
+    val TIME = 100 ms
     val CYCLES = (TIME * ClockDomain.current.frequency.getValue).toBigInt
 
     val counter = Reg(UInt(log2Up(CYCLES) bits)) init(0)
@@ -231,15 +186,17 @@ case class Display() extends Component {
   val HEIGHT = 480
   val PIXELS = WIDTH * HEIGHT
 
+  io.display.read := True
+  io.display.reset := True
 
-  val chipSelect = Reg(Bool()) init(False)
+  val chipSelect = Reg(Bool()) init(True)
   io.display.cs := chipSelect
 
   val mode = Reg(MessageMode()) init(MessageMode.DATA)
   io.display.cd := mode === MessageMode.DATA
 
   val write = Reg(Bool()) init(False)
-  io.display.write := write & ClockDomain.current.readClockWire
+  io.display.write := ~(write & ClockDomain.current.readClockWire)
 
   val data = Reg(UInt(8 bits)) init(0)
   io.display.data := data
@@ -278,15 +235,16 @@ case class Display() extends Component {
       }
     }
 
+    val test = Reg(UInt(8 bits)) init(0)
     val drawState : State = new State {
       onEntry {
         byteIndex := 0
       }
       whenIsActive {
         mode := MessageMode.DATA
-        data := 0
+        data := test
         byteIndex := byteIndex + 1
-
+        test := test + 1
         when (byteIndex === PIXELS * 3 - 1) {
           goto(frameWait)
         }

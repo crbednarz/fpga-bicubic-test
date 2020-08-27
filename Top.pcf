@@ -20,3 +20,5 @@ set_io io_display_write 45
 set_io io_display_cd 48
 set_io io_display_cs 44
 
+set_io io_display_read 46
+set_io io_display_reset 43
