@@ -17,8 +17,13 @@ object Amg8833Sim {
       .withConfig(spinalConfig)
       .doSim(new Amg8833()) { dut =>
       dut.clockDomain.forkStimulus(period = 10)
-
+      var sda = true
       for(idx <- 0 to 30000){
+        dut.io.sda.read #= sda
+        if (dut.i2cCtrl.timing.tickChange.toBoolean) {
+          sda = !sda
+
+        }
         dut.clockDomain.waitSampling()
       }
     }

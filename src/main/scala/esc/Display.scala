@@ -3,6 +3,7 @@ package esc
 import spinal.core._
 import spinal.lib._
 import spinal.lib.fsm._
+import spinal.lib.graphic.Rgb
 import spinal.lib.io._
 
 case class DisplayIo() extends Bundle {
@@ -74,7 +75,7 @@ case class DisplayInitializer() extends Component
 
 
   val sequence = Mem(DisplayMessage(), initialContent = Array(
-    CommandMessage(CMD_NOP),
+    CommandMessage(CMD_NOP, True),
     CommandMessage(CMD_SWRESET, True),
     CommandMessage(CMD_SETEXTC),
     DataMessage(0xFF),
@@ -122,7 +123,16 @@ case class DisplayInitializer() extends Component
     DataMessage(0x00, True),
     CommandMessage(CMD_DISPON),
     DataMessage(0x00, True),
-    CommandMessage(CMD_NOP)
+    CommandMessage(CMD_CASET),
+    DataMessage(0x00),
+    DataMessage(0x00),
+    DataMessage(0x00),
+    DataMessage(0xFF),
+    CommandMessage(CMD_PASET),
+    DataMessage(0x00),
+    DataMessage(0x00),
+    DataMessage(0x00),
+    DataMessage(0xFF)
   ))
 
   val delay = new Area {
@@ -180,10 +190,12 @@ case class DisplayInitializer() extends Component
 case class Display() extends Component {
   val io = new Bundle {
     val display = out(DisplayIo())
+
+    val colorStream = slave Stream(Rgb(8, 8, 8))
   }
 
-  val WIDTH = 320
-  val HEIGHT = 480
+  val WIDTH = 256
+  val HEIGHT = 256
   val PIXELS = WIDTH * HEIGHT
 
   io.display.read := True
@@ -200,6 +212,9 @@ case class Display() extends Component {
 
   val data = Reg(UInt(8 bits)) init(0)
   io.display.data := data
+
+  val colorStreamReady = RegNext(False)
+  io.colorStream.ready := colorStreamReady
 
 
   val stateMachine = new StateMachine {
@@ -227,38 +242,43 @@ case class Display() extends Component {
       }
     }
 
+    val channelCount = Reg(UInt(2 bits)) init(0)
     val drawSetupState : State = new State {
       whenIsActive {
         mode := MessageMode.COMMAND
+
         data := 0x2C
         goto(drawState)
       }
     }
 
-    val test = Reg(UInt(8 bits)) init(0)
+
     val drawState : State = new State {
       onEntry {
         byteIndex := 0
       }
       whenIsActive {
         mode := MessageMode.DATA
-        data := test
+
+        channelCount := channelCount + 1
+        switch(channelCount) {
+          is(0) {
+            data := io.colorStream.payload.r
+          }
+          is(1) {
+            data := io.colorStream.payload.g
+          }
+          is(2) {
+            data := io.colorStream.payload.b
+            colorStreamReady := True
+            channelCount := 0
+          }
+        }
         byteIndex := byteIndex + 1
-        test := test + 1
-        when (byteIndex === PIXELS * 3 - 1) {
-          goto(frameWait)
+        when(byteIndex === PIXELS * 3 - 1) {
+          goto(drawSetupState)
         }
       }
     }
-
-    val frameWait : State = new StateDelay(20 ms) {
-      whenIsActive {
-        write := False
-      }
-      whenCompleted {
-        goto(drawSetupState)
-      }
-    }
-
   }
 }

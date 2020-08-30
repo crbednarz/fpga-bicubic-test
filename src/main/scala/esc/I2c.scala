@@ -4,6 +4,7 @@ import spinal.core._
 import spinal.lib._
 import spinal.lib.fsm._
 import spinal.lib.io._
+import spinal.core.sim._
 
 object I2cMode extends SpinalEnum {
   val READ, WRITE = newElement()
@@ -30,7 +31,7 @@ case class I2cController(slaveAddress : BigInt, frequency: HertzNumber) extends 
     val tickHigh = RegNext(False)
     val tickLow = RegNext(False)
     val tickMid = RegNext(False)
-    val tickChange = RegNext(False)
+    val tickChange = RegNext(False) simPublic()
 
     counter := counter - 1
 

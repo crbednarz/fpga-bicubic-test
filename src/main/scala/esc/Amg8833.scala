@@ -11,12 +11,21 @@ case class Amg8833() extends Component {
     val scl = out Bool()
     val sda = master(ReadableOpenDrain(Bool()))
 
+    val output = master(FrameWrite(UInt(12 bits), 8, 8))
   }
 
-  val i2cEnable = Reg(Bool()) init(False)
-  val i2cWriteValid = Reg(Bool()) init(False)
+  val i2cEnable = RegInit(False)
+  val i2cWriteValid = RegInit(False)
   val i2cWritePayload = Reg(UInt(8 bits))
   val i2cMode = Reg(I2cMode())
+
+  val bytesRead = Reg(UInt(8 bits)) init(0)
+  val i2cReadValid = RegNext(False)
+  val i2cReadPayload = Reg(UInt(16 bits)) init(0)
+  val i2cReadAddress = Reg(UInt(6 bits)) init(0)
+  io.output.address := i2cReadAddress
+  io.output.valid := i2cReadValid
+  io.output.data := i2cReadPayload(11 downto 0)
 
   val i2cCtrl = I2cController(0x69, 200000 Hz)
   i2cCtrl.io.enable := i2cEnable
@@ -88,7 +97,6 @@ case class Amg8833() extends Component {
   }
 
   val stateMachine = new StateMachine {
-    val bytesRead = Reg(UInt(8 bits))
 
     val initState : State = new StateFsm(fsm=bootFsm()) with EntryPoint {
       onEntry {
@@ -133,7 +141,14 @@ case class Amg8833() extends Component {
         when (i2cCtrl.io.read.valid) {
           bytesRead := bytesRead + 1
 
-          when (bytesRead === 16 * 2 - 1) {
+          i2cReadPayload := i2cCtrl.io.read.payload @@ i2cReadPayload(15 downto 8)
+
+          when (bytesRead(0)) {
+            i2cReadAddress := bytesRead(6 downto 1)
+            i2cReadValid := True
+          }
+
+          when (bytesRead === 64 * 2 - 1) {
             i2cEnable := False
             goto(waitForReadState)
           }
@@ -147,6 +162,12 @@ case class Amg8833() extends Component {
         when (~i2cCtrl.io.busy) {
           goto(beginRequestState)
         }
+      }
+    }
+
+    val frameDelayState : State = new StateDelay(100 ms) {
+      whenCompleted {
+        goto(beginRequestState)
       }
     }
   }
