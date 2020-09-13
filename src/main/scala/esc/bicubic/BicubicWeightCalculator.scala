@@ -17,7 +17,7 @@ case class BicubicWeightCalculator() extends Component {
   val canConsumeInput = (!outputValid | io.output.ready) & !busy & io.input.valid
   io.input.ready := canConsumeInput
 
-  val stage = Reg(UInt(2 bits))
+  val stage = Reg(UInt(3 bits))
   val samples = Reg(Vec(SInt(16 bits), 4))
 
 
