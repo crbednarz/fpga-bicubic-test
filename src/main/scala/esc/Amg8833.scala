@@ -8,11 +8,15 @@ import spinal.lib.io._
 
 case class Amg8833() extends Component {
   val io = new Bundle {
-    val scl = out Bool()
-    val sda = master(ReadableOpenDrain(Bool()))
+    val scl = out Bool
+    val sda = master(ReadableOpenDrain(Bool))
 
     val output = master(FrameWrite(UInt(12 bits), 8, 8))
+    val frameComplete = out Bool
   }
+
+  val WIDTH = 8
+  val HEIGHT = 8
 
   val i2cEnable = RegInit(False)
   val i2cWriteValid = RegInit(False)
@@ -35,6 +39,9 @@ case class Amg8833() extends Component {
 
   io.scl <> i2cCtrl.io.scl
   io.sda <> i2cCtrl.io.sda
+
+  val frameComplete = RegNext(False)
+  io.frameComplete := frameComplete
 
   val initSequence = Mem(UInt(8 bits), initialContent = Array(
     // PCTRL -> Normal
@@ -148,8 +155,9 @@ case class Amg8833() extends Component {
             i2cReadValid := True
           }
 
-          when (bytesRead === 64 * 2 - 1) {
+          when (bytesRead === WIDTH * HEIGHT * 2 - 1) {
             i2cEnable := False
+            frameComplete := True
             goto(waitForReadState)
           }
         }

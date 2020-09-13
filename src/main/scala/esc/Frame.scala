@@ -6,6 +6,8 @@ import spinal.lib.fsm._
 import spinal.lib.io._
 
 case class FrameWrite[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt) extends Bundle with IMasterSlave {
+  def addressWidth = log2Up(width * height)
+
   val data: T = wordType()
   val address = UInt(log2Up(width * height) bits)
   val valid = Bool
@@ -17,6 +19,8 @@ case class FrameWrite[T <: Data](wordType: HardType[T], width: BigInt, height: B
 
 
 case class FrameRead[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt) extends Bundle with IMasterSlave {
+  def addressWidth = log2Up(width * height)
+
   val data: T = wordType()
   val address = UInt(log2Up(width * height) bits)
 

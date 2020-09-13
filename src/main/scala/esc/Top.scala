@@ -1,5 +1,6 @@
 package esc
 
+import esc.bicubic.BicubicUpscaler
 import spinal.core._
 import spinal.lib.Reverse
 import spinal.lib.com.uart._
@@ -47,11 +48,11 @@ class Top extends Component {
     val frame = Frame(UInt(12 bits), 8, 8)
     frame.io.input <> camera.io.output
 
-    val upscaler = Upscaler(256, 256)
+    val upscaler = BicubicUpscaler(256, 256)
     frame.io.output <> upscaler.io.source
 
     val converter = ColorScale()
-    converter.io.input <> upscaler.io.upscaled
+    converter.io.input <> upscaler.io.output
 
     val lcd = Display()
     io.display := lcd.io.display
