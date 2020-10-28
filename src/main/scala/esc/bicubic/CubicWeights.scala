@@ -7,12 +7,15 @@ case class CubicWeights() extends Component {
   val io = new Bundle {
     val samples = slave Flow(Vec(SInt(16 bits), 4))
     val weights = master Flow(Vec(SInt(16 bits), 4))
+    val busy = out Bool
   }
 
   val busy = RegInit(False)
+  io.busy := busy
+
   val samples = Reg(Vec(SInt(16 bits), 4))
   val weights = Reg(Vec(SInt(16 bits), 4))
-  val weightsValid = RegNext(False)
+  val weightsValid = RegNext(False) init(False)
 
   val stage = Reg(UInt(2 bits)) init(0)
 
@@ -54,3 +57,4 @@ case class CubicWeights() extends Component {
   io.weights.payload := weights
   io.weights.valid := weightsValid
 }
+

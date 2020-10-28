@@ -9,23 +9,39 @@ case class CubicInput() extends Bundle {
   val delta = SInt(16 bits)
 }
 
-case class Cubic() extends Component {/*
+case class Cubic() extends Component {
   val io = new Bundle {
     val input = slave Stream(CubicInput())
-    val output = master Stream(SInt(16 bits))
+    val output = master Flow(SInt(16 bits))
   }
 
-  val input = Reg(CubicInput())
+  val weights = CubicWeights()
+  val interpolate = CubicInterpolate()
+
+  val delta = Reg(SInt(16 bits)) init(0)
   val busy = RegInit(False)
 
+  interpolate.io.weights := weights.io.weights.payload
+  interpolate.io.inputValid := weights.io.weights.valid
+  interpolate.io.delta := delta
+  weights.io.samples.payload := io.input.payload.samples
+  weights.io.samples.valid := io.input.valid & !busy
 
-  io.input.ready := busy
-
-  when (!busy && io.input.valid) {
-    input := io.input
+  when (io.input.valid & !busy) {
+    delta := io.input.payload.delta
     busy := True
-    weights.valid := True
   }
 
-  io.output.valid := !busy*/
+  val result = Reg(SInt(16 bits)) init(0)
+  val outputValid = RegNext(False) init(False)
+
+  when (interpolate.io.output.valid) {
+    result := interpolate.io.output.payload
+    outputValid := True
+    busy := False
+  }
+
+  io.input.ready := !busy
+  io.output.payload := result
+  io.output.valid := outputValid
 }
