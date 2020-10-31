@@ -8,28 +8,28 @@ import spinal.lib._
  */
 case class MultiplyAdd() extends Component {
   val io = new Bundle {
-    val a = in SInt(16 bits)
-    val b = in SInt(16 bits)
-    val c = in SInt(16 bits)
+    val a = in SFix(3 exp, 16 bits)
+    val b = in SFix(3 exp, 16 bits)
+    val c = in SFix(3 exp, 16 bits)
 
-    val output = out SInt(16 bits)
+    val output = out SFix(3 exp, 16 bits)
   }
 
-  io.output := (io.a * io.b + (io.c << 12))(27 downto 12)
+  io.output := (io.a * io.b + io.c).truncated
 }
 
 case class CubicInterpolate() extends Component {
   val io = new Bundle {
-    val weights = in Vec(SInt(16 bits), 4)
-    val delta = in SInt(16 bits)
+    val weights = in Vec(SFix(3 exp, 16 bits), 4)
+    val delta = in SFix(3 exp, 16 bits)
     val inputValid = in Bool
 
     val busy = out Bool
-    val output = master Flow(SInt(16 bits))
+    val output = master Flow(SFix(3 exp, 16 bits))
   }
 
-  val weights = Reg(Vec(SInt(16 bits), 4))
-  val delta = Reg(SInt(16 bits))
+  val weights = Reg(Vec(SFix(3 exp, 16 bits), 4))
+  val delta = Reg(SFix(3 exp, 16 bits))
 
   val multiplyAdd = MultiplyAdd()
   multiplyAdd.io.a := delta
@@ -44,7 +44,7 @@ case class CubicInterpolate() extends Component {
     }
     is (1) {
       multiplyAdd.io.c := weights(2)
-      weights(0) := (multiplyAdd.io.output >> 1).resized
+      weights(0) := (multiplyAdd.io.output >> 1).truncated
     }
     is (2) {
       multiplyAdd.io.c := weights(3)

@@ -22,11 +22,11 @@ object CubicInterpolateSim {
           val w3 = Random.nextInt(0xFFF << 1) - 0xFFF
           val delta = Random.nextInt(0xFFF)
 
-          dut.io.weights(0) #= w0
-          dut.io.weights(1) #= w1
-          dut.io.weights(2) #= w2
-          dut.io.weights(3) #= w3
-          dut.io.delta #= delta
+          dut.io.weights(0).raw #= w0
+          dut.io.weights(1).raw #= w1
+          dut.io.weights(2).raw #= w2
+          dut.io.weights(3).raw #= w3
+          dut.io.delta.raw #= delta
           dut.io.inputValid #= true
           dut.clockDomain.waitSampling()
           dut.io.inputValid #= false
@@ -38,7 +38,7 @@ object CubicInterpolateSim {
           result = ((result * delta) >> 12) + w3
 
           assert(dut.io.output.valid.toBoolean)
-          assert(dut.io.output.payload.toInt == result)
+          assert(dut.io.output.payload.raw.toInt == result)
         }
       }
   }

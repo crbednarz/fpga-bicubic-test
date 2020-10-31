@@ -16,17 +16,17 @@ object CubicSim {
         dut.clockDomain.forkStimulus(period = 10)
 
         for(idx <- 0 to 100) {
-          val s0 = Random.nextInt(0xFFF)
-          val s1 = Random.nextInt(0xFFF)
-          val s2 = Random.nextInt(0xFFF)
-          val s3 = Random.nextInt(0xFFF)
+          val s0 = Random.nextInt(0xFFF + 0xFF) - 0x7F
+          val s1 = Random.nextInt(0xFFF + 0xFF) - 0x7F
+          val s2 = Random.nextInt(0xFFF + 0xFF) - 0x7F
+          val s3 = Random.nextInt(0xFFF + 0xFF) - 0x7F
           val delta = Random.nextInt(0xFFF)
 
-          dut.io.input.samples(0) #= s0
-          dut.io.input.samples(1) #= s1
-          dut.io.input.samples(2) #= s2
-          dut.io.input.samples(3) #= s3
-          dut.io.input.delta #= delta
+          dut.io.input.samples(0).raw #= s0
+          dut.io.input.samples(1).raw #= s1
+          dut.io.input.samples(2).raw #= s2
+          dut.io.input.samples(3).raw #= s3
+          dut.io.input.delta.raw #= delta
           dut.io.input.valid #= true
           dut.clockDomain.waitSampling()
           dut.io.input.valid #= false
@@ -43,7 +43,7 @@ object CubicSim {
           result = ((result * delta) >> 12) + w3
 
           assert(dut.io.output.valid.toBoolean)
-          assert(dut.io.output.payload.toInt == result)
+          assert(dut.io.output.payload.raw.toInt == result)
         }
       }
   }

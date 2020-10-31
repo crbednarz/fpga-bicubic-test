@@ -5,20 +5,20 @@ import spinal.core._
 import spinal.lib._
 
 case class CubicInput() extends Bundle {
-  val samples = Vec(SInt(16 bits), 4)
-  val delta = SInt(16 bits)
+  val samples = Vec(SFix(3 exp, 16 bits), 4)
+  val delta = SFix(3 exp, 16 bits)
 }
 
 case class Cubic() extends Component {
   val io = new Bundle {
     val input = slave Stream(CubicInput())
-    val output = master Flow(SInt(16 bits))
+    val output = master Flow(SFix(3 exp, 16 bits))
   }
 
   val weights = CubicWeights()
   val interpolate = CubicInterpolate()
 
-  val delta = Reg(SInt(16 bits)) init(0)
+  val delta = Reg(SFix(3 exp, 16 bits)) init(0)
   val busy = RegInit(False)
 
   interpolate.io.weights := weights.io.weights.payload
@@ -32,7 +32,7 @@ case class Cubic() extends Component {
     busy := True
   }
 
-  val result = Reg(SInt(16 bits)) init(0)
+  val result = Reg(SFix(3 exp, 16 bits)) init(0)
   val outputValid = RegNext(False) init(False)
 
   when (interpolate.io.output.valid) {
