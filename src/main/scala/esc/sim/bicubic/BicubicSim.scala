@@ -1,9 +1,8 @@
-package esc.sim
+package esc.sim.bicubic
 
-
+import esc.bicubic.BicubicUpscaler
 import spinal.core._
 import spinal.core.sim._
-import esc.bicubic.BicubicUpscaler
 
 
 object BicubicSim {

@@ -1,11 +1,10 @@
-package esc.sim
+package esc.sim.bicubic
 
-
-import spinal.core._
-import spinal.sim._
-import spinal.core.sim._
-import scala.util.Random
 import esc.bicubic._
+import spinal.core._
+import spinal.core.sim._
+
+import scala.util.Random
 
 
 object CubicWeightsSim {
