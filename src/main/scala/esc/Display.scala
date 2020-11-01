@@ -167,7 +167,7 @@ case class DisplayInitializer() extends Component
   io.output.payload := message
 
   val nextMessageIndex = messageIndex + 1
-  val nextMessage = sequence(nextMessageIndex)
+  val nextMessage = sequence.readSync(nextMessageIndex)
 
   when (delay.active) {
     when (io.output.ready) {

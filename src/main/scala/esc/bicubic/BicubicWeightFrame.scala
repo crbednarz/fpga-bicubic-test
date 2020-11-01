@@ -9,7 +9,7 @@ case class BicubicWeightFrame(width: BigInt, height: BigInt) extends Component {
   val io = new Bundle {
     val sourceValid = in Bool
     val source = master(FrameRead(UInt(12 bits), 8, 8))
-    val output = master(FrameRead(SInt(16 bits), 8, 8, 4))
+    val output = slave(FrameRead(SInt(16 bits), 8, 8, 4))
   }
   // The goal here is to generate 4 weights for each pixel. Having this
   // cached will save quite a bit of processing later on.
@@ -29,14 +29,14 @@ case class BicubicWeightFrame(width: BigInt, height: BigInt) extends Component {
 
   calculator.io.output.ready := False
 
+  io.output.data := buffer.readSync(io.output.address)
+  buffer.write(writeAddress, calculator.io.output.payload(writeAddress(1 downto 0)), calculator.io.output.valid)
+
   when (calculator.io.output.valid) {
     writeAddress := writeAddress + 1
-    buffer(writeAddress) := calculator.io.output.payload(writeAddress(1 downto 0))
 
     when (writeAddress(1 downto 0) === 3) {
       calculator.io.output.ready := True
     }
   }
-
-  io.output.data := buffer(io.output.address)
 }
