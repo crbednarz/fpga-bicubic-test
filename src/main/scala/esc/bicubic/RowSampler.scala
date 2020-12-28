@@ -10,7 +10,7 @@ case class RowSampler(sourceWidth: Int, sourceHeight: Int) extends Component {
   val io = new Bundle {
     val source = master(FrameRead(UInt(12 bits), sourceWidth, sourceHeight))
     val sourceIndex = in UInt(log2Up(sourceWidth * sourceHeight) bits)
-    val sourceIncMask = in Bits(4 bits)
+    val sourceIncMask = in Bits(3 bits)
     val enable = in Bool()
 
     val samples = master Stream(Vec(UInt(12 bits), 4))
@@ -41,7 +41,7 @@ case class RowSampler(sourceWidth: Int, sourceHeight: Int) extends Component {
       whenIsActive {
         index := io.sourceIndex
         baseIndex := io.sourceIndex
-        incMask := io.sourceIncMask
+        incMask := U"1" ## io.sourceIncMask
         xCount := 0
 
         when (io.enable) {
@@ -67,7 +67,7 @@ case class RowSampler(sourceWidth: Int, sourceHeight: Int) extends Component {
         }
 
         quadCounter := quadCounter + 1
-        incMask := incMask.rotateLeft(1)
+        incMask := incMask.rotateRight(1)
 
         when (quadCounter === 3) {
           val nextBaseIndex = baseIndex + 1

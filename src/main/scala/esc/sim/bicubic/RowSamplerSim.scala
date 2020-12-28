@@ -5,14 +5,12 @@ import spinal.core._
 import spinal.lib._
 import spinal.core.sim._
 
-import scala.util.Random
-
 
 object RowSamplerSim {
   class RowSamplerDut(width: Int, height: Int) extends Component {
     val io = new Bundle {
       val sourceIndex = in UInt(log2Up(width * height) bits)
-      val sourceIncMask = in Bits(4 bits)
+      val sourceIncMask = in Bits(3 bits)
       val enable = in Bool
 
       val samples = master Stream(Vec(UInt(12 bits), 4))
@@ -41,7 +39,7 @@ object RowSamplerSim {
 
         dut.io.enable #= true
         dut.io.sourceIndex #= startIndex
-        dut.io.sourceIncMask #= 0x3
+        dut.io.sourceIncMask #= 0x1
         dut.clockDomain.waitSampling()
         dut.io.samples.ready #= false
 
