@@ -27,9 +27,10 @@ object CubicSim {
           dut.io.input.samples(3).raw #= s3
           dut.io.input.delta.raw #= delta
           dut.io.input.valid #= true
+          dut.io.output.ready #= true
           dut.clockDomain.waitSampling()
           dut.io.input.valid #= false
-          dut.clockDomain.waitSampling(10)
+          dut.clockDomain.waitSampling(11)
 
           val w0 = (s1 - s2) * 3 + s3 - s0
           val w1 = 2 * s0 - 5 * s1 + 4 * s2 - s3

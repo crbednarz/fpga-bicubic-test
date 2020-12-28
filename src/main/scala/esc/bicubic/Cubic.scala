@@ -12,7 +12,7 @@ case class CubicInput() extends Bundle {
 case class Cubic() extends Component {
   val io = new Bundle {
     val input = slave Stream(CubicInput())
-    val output = master Flow(SFix(3 exp, 16 bits))
+    val output = master Stream(SFix(3 exp, 16 bits))
   }
 
   val weights = CubicWeights()
@@ -20,6 +20,11 @@ case class Cubic() extends Component {
 
   val delta = Reg(SFix(3 exp, 16 bits)) init(0)
   val busy = RegInit(False)
+
+  val result = Reg(SFix(3 exp, 16 bits)) init(0)
+  val resultValid = RegInit(False)
+  val output = Reg(SFix(3 exp, 16 bits)) init(0)
+  val outputValid = RegNext(False) init(False)
 
   interpolate.io.weights := weights.io.weights.payload
   interpolate.io.inputValid := weights.io.weights.valid
@@ -30,18 +35,23 @@ case class Cubic() extends Component {
   when (io.input.valid & !busy) {
     delta := io.input.payload.delta
     busy := True
-  }
-
-  val result = Reg(SFix(3 exp, 16 bits)) init(0)
-  val outputValid = RegNext(False) init(False)
-
-  when (interpolate.io.output.valid) {
-    result := interpolate.io.output.payload
-    outputValid := True
-    busy := False
+    resultValid := False
   }
 
   io.input.ready := !busy
-  io.output.payload := result
+
+  when (interpolate.io.output.valid) {
+    result := interpolate.io.output.payload
+    resultValid := True
+  }
+
+  when (io.output.ready && resultValid) {
+    busy := False
+    output := result
+    outputValid := True
+  }
+
+  io.output.payload := output
   io.output.valid := outputValid
+
 }
