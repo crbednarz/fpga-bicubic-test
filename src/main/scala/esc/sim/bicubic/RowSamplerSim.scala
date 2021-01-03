@@ -1,5 +1,6 @@
 package esc.sim.bicubic
 
+import esc.Frame
 import esc.bicubic._
 import spinal.core._
 import spinal.lib._
@@ -16,7 +17,15 @@ object RowSamplerSim {
       val samples = master Stream(Vec(UInt(12 bits), 4))
       val busy = out Bool
     }
+
+    def frameData = for (i <- 0 until width * height) yield U(i)
+
+    val frame = Frame(UInt(12 bits), width, height) init(frameData)
     val sampler = RowSampler(width, height)
+
+    frame.io.input.address := 0
+    frame.io.input.valid := False
+    frame.io.input.data := 0
 
     sampler.io.sourceIndex <> io.sourceIndex
     sampler.io.sourceIncMask <> io.sourceIncMask
@@ -25,7 +34,7 @@ object RowSamplerSim {
 
     io.samples <> sampler.io.samples
 
-    sampler.io.source.data := sampler.io.source.address.resized
+    frame.io.output <> sampler.io.source
   }
   def main(args: Array[String]) {
     val width = 10

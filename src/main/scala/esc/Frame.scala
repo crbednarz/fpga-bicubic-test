@@ -41,6 +41,11 @@ case class Frame[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt
 
   val buffer = Mem(wordType, width * height * channels)
 
+  def init(data: Seq[T]): this.type = {
+    buffer.init(data)
+    this
+  }
+
   when (io.input.valid) {
     buffer.write(io.input.address, io.input.data)
   }
