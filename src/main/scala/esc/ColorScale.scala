@@ -9,7 +9,7 @@ import spinal.lib.io._
 
 case class ColorScale() extends Component {
   val io = new Bundle {
-    val input = slave Stream(SInt(16 bits))
+    val input = slave Stream(SFix(3 exp, 16 bits))
     val output = master Stream(Rgb(8, 8, 8))
   }
 
@@ -27,9 +27,9 @@ case class ColorScale() extends Component {
   when (canOutput) {
     outputValid := True
 
-    outputValue.r := io.input.payload(8 downto 1).asUInt
-    outputValue.g := io.input.payload(8 downto 1).asUInt
-    outputValue.b := io.input.payload(8 downto 1).asUInt
+    outputValue.r := io.input.payload.raw(8 downto 1).asUInt
+    outputValue.g := io.input.payload.raw(8 downto 1).asUInt
+    outputValue.b := io.input.payload.raw(8 downto 1).asUInt
   }.elsewhen(io.output.ready) {
     outputValid := False
   }

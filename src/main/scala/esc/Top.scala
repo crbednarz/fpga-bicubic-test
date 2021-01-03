@@ -48,9 +48,9 @@ class Top extends Component {
     val frame = Frame(UInt(12 bits), 8, 8)
     frame.io.input <> camera.io.output
 
-    val upscaler = BicubicUpscaler(256, 256)
+    val upscaler = BicubicUpscaler(8, 8, 256, 256)
     frame.io.output <> upscaler.io.source
-    upscaler.io.sourceValid := camera.io.frameComplete
+    upscaler.io.enable := camera.io.frameComplete
 
     val converter = ColorScale()
     converter.io.input <> upscaler.io.output
