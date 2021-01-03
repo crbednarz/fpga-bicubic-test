@@ -15,29 +15,22 @@ object CubicInterpolateSim {
         dut.clockDomain.forkStimulus(period = 10)
 
         for(idx <- 0 to 100) {
-          val w0 = Random.nextInt(0xFFF << 1) - 0xFFF
-          val w1 = Random.nextInt(0xFFF << 1) - 0xFFF
-          val w2 = Random.nextInt(0xFFF << 1) - 0xFFF
-          val w3 = Random.nextInt(0xFFF << 1) - 0xFFF
-          val delta = Random.nextInt(0xFFF)
+          val weights = BicubicUtil.randomWeights()
+          val delta = BicubicUtil.randomDelta()
 
-          dut.io.weights(0).raw #= w0
-          dut.io.weights(1).raw #= w1
-          dut.io.weights(2).raw #= w2
-          dut.io.weights(3).raw #= w3
+          for (i <- 0 to 3) {
+            dut.io.weights(i).raw #= weights(i)
+          }
           dut.io.delta.raw #= delta
           dut.io.inputValid #= true
           dut.clockDomain.waitSampling()
           dut.io.inputValid #= false
           dut.clockDomain.waitSampling(4)
 
-          var result = ((w0 * delta) >> 12) + w1
-          result = ((result * delta) >> 12) + w2
-          result >>= 1
-          result = ((result * delta) >> 12) + w3
+          val expected = BicubicUtil.cubicInterpolate(weights, delta)
 
           assert(dut.io.output.valid.toBoolean)
-          assert(dut.io.output.payload.raw.toInt == result)
+          assert(dut.io.output.payload.raw.toInt == expected)
         }
       }
   }
