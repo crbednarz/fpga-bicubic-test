@@ -7,8 +7,8 @@ import spinal.lib._
 import spinal.core.sim._
 
 
-object RowSamplerSim {
-  class RowSamplerDut(width: Int, height: Int) extends Component {
+object SourceRowReaderSim {
+  class SourceRowReaderDut(width: Int, height: Int) extends Component {
     val io = new Bundle {
       val sourceIndex = in UInt(log2Up(width * height) bits)
       val sourceIncMask = in Bits(3 bits)
@@ -21,7 +21,7 @@ object RowSamplerSim {
     def frameData = for (i <- 0 until width * height) yield U(i)
 
     val frame = Frame(UInt(12 bits), width, height) init(frameData)
-    val sampler = RowSampler(width, height)
+    val sampler = SourceRowReader(width, height)
 
     frame.io.input.address := 0
     frame.io.input.valid := False
@@ -43,7 +43,7 @@ object RowSamplerSim {
 
     SimConfig
       .withWave
-      .doSim(new RowSamplerDut(width, height)) { dut =>
+      .doSim(new SourceRowReaderDut(width, height)) { dut =>
         dut.clockDomain.forkStimulus(period = 10)
 
         dut.io.enable #= true

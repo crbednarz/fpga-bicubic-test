@@ -5,8 +5,19 @@ import spinal.core._
 import spinal.lib._
 import spinal.lib.fsm._
 
-
-case class RowSampler(sourceWidth: Int, sourceHeight: Int) extends Component {
+/**
+ * Reads four rows from a single channel image buffer.
+ * As the goal here is to perform cubic interpolation, the read order is as follows:
+ * [0] [4]
+ * [1] [5]
+ * [2] [6]
+ * [3] [7]
+ * And so on, heading left to right until the edge of the image is reached.
+ * To help with cases where the target row is on edge of the source image, sourceIncMask can be used to control
+ * whether the index is shifted down each time.
+ * As an example, a mask of 110 would have the first four sample indices of: 0, 0, 1, 2.
+ */
+case class SourceRowReader(sourceWidth: Int, sourceHeight: Int) extends Component {
   val io = new Bundle {
     val source = master(FrameRead(UInt(12 bits), sourceWidth, sourceHeight))
     val sourceIndex = in UInt(log2Up(sourceWidth * sourceHeight) bits)
