@@ -60,8 +60,8 @@ object ScaledRowFeedSim {
             val expectedDelta = sourceX - Math.floor(sourceX)
             val actualDelta = dut.io.output.delta.raw.toInt.toDouble / 0xFFF
             val margin = 0.05
-            assert(actualDelta < expectedDelta + margin)
-            assert(actualDelta > expectedDelta - margin)
+            assert(actualDelta < expectedDelta + margin, s"For { $x, $y } Expected: $expectedDelta Actual: $actualDelta")
+            assert(actualDelta > expectedDelta - margin, s"For { $x, $y } Expected: $expectedDelta Actual: $actualDelta")
 
             sourceX += increment
             index += 1
