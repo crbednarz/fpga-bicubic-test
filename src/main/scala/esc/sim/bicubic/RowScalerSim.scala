@@ -6,8 +6,8 @@ import spinal.core.sim._
 import spinal.lib._
 
 
-object ScaledRowFeedSim {
-  class ScaledRowFeedDut(sourceSize: Int, destSize: Int) extends Component {
+object RowScalerSim {
+  class RowScalerDut(sourceSize: Int, destSize: Int) extends Component {
     val io = new Bundle {
       val output = master Stream(CubicInput())
     }
@@ -15,7 +15,7 @@ object ScaledRowFeedSim {
     val index = Reg(SInt(16 bits)) init(0)
     val valid = RegInit(True)
 
-    val feed = ScaledRowFeed(sourceSize, destSize)
+    val feed = RowScaler(sourceSize, destSize)
     feed.io.input.valid := valid
     feed.io.input.payload.raw := index
 
@@ -35,7 +35,7 @@ object ScaledRowFeedSim {
 
     SimConfig
       .withWave
-      .doSim(new ScaledRowFeedDut(sourceSize, destSize)) { dut =>
+      .doSim(new RowScalerDut(sourceSize, destSize)) { dut =>
         dut.clockDomain.forkStimulus(period = 10)
         dut.io.output.ready #= false
         dut.clockDomain.waitSampling()

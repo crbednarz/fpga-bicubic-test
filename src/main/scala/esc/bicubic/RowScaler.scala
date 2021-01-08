@@ -7,7 +7,7 @@ import spinal.lib._
  * Converts a series of per-source-pixel values to per-destination-pixel values with a delta to represent the distance
  * between the last and next source pixel.
  */
-case class ScaledRowFeed(sourceSize: Int, destSize: Int) extends Component {
+case class RowScaler(sourceSize: Int, destSize: Int) extends Component {
   val io = new Bundle {
     val input = slave Stream(SFix(3 exp, 16 bits))
     val output = master Stream(CubicInput())
