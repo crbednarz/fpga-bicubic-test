@@ -24,7 +24,7 @@ case class Cubic() extends Component {
   val result = Reg(SFix(3 exp, 16 bits)) init(0)
   val resultValid = RegInit(False)
   val output = Reg(SFix(3 exp, 16 bits)) init(0)
-  val outputValid = RegNext(False) init(False)
+  val outputValid = RegInit(False)
 
   interpolate.io.weights := weights.io.weights.payload
   interpolate.io.inputValid := weights.io.weights.valid
@@ -45,10 +45,16 @@ case class Cubic() extends Component {
     resultValid := True
   }
 
-  when (io.output.ready && resultValid) {
-    busy := False
-    output := result
-    outputValid := True
+  val canAssignOutput = io.output.ready || !outputValid
+  when (canAssignOutput) {
+    when (resultValid) {
+      busy := False
+      output := result
+      outputValid := True
+      resultValid := False
+    } otherwise {
+      outputValid := False
+    }
   }
 
   io.output.payload := output

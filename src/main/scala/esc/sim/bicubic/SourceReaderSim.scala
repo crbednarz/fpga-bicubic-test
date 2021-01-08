@@ -33,7 +33,6 @@ object SourceReaderSim {
     val sourceHeight = 5
     val destWidth = 22
     val destHeight = 22
-    val xIncrement = sourceWidth.toDouble / (destWidth - 1.0)
     val yIncrement = sourceHeight.toDouble / (destHeight - 1.0)
 
     SimConfig
@@ -47,7 +46,6 @@ object SourceReaderSim {
         for (z <- 0 until 3) {
           var sourceY = -0.5
           for (y <- 0 until destHeight) {
-
             for (x <- 0 until sourceWidth) {
               while (!dut.io.output.valid.toBoolean) {
                 dut.clockDomain.waitSampling(1)
