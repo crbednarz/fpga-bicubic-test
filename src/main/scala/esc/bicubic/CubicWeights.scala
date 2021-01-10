@@ -3,57 +3,65 @@ package esc.bicubic
 import spinal.core._
 import spinal.lib._
 
+
 case class CubicWeights() extends Component {
   val io = new Bundle {
-    val samples = slave Flow(Vec(SFix(3 exp, 16 bits), 4))
-    val weights = master Flow(Vec(SFix(3 exp, 16 bits), 4))
-    val busy = out Bool
+    val input = slave Stream(CubicParam())
+    val output = master Stream(CubicParam())
   }
+
   val busy = RegInit(False)
-  io.busy := busy
-
   val samples = Reg(Vec(SFix(3 exp, 16 bits), 4))
-  val weights = Reg(Vec(SFix(3 exp, 16 bits), 4))
-  val weightsValid = RegNext(False) init(False)
+  val stage = Reg(UInt(2 bits)) init(3)
+  val output = Reg(CubicParam())
+  val outputValid = RegInit(False)
+  val weights = output.samples
 
-  val stage = Reg(UInt(2 bits)) init(0)
+  io.input.ready := !busy
 
-  stage := stage + 1
+  when (io.input.valid & !busy) {
+    val inputSamples = io.input.payload.samples
+
+    busy := True
+    samples := inputSamples
+    output.delta := io.input.payload.delta
+    weights(0) := inputSamples(1) - inputSamples(2)
+    weights(1) := ((inputSamples(0) << 1) - (inputSamples(1) << 2)).truncated
+    stage := 0
+  }
+
+  when (stage < 3) {
+    stage := stage + 1
+  }
 
   weights(2) := samples(2) - samples(0)
   weights(3) := samples(1)
 
   switch(stage) {
     is(0) {
-      weights(0) := samples(1) - samples(2)
-      weights(1) := ((samples(0) << 1) - (samples(1) << 2)).truncated
-    }
-    is(1) {
       weights(0) := ((weights(0) << 1) + weights(0)).truncated
       weights(1) := weights(1) - samples(1)
     }
-    is(2) {
+    is(1) {
       weights(0) := weights(0) + samples(3)
       weights(1) := (weights(1) + (samples(2) << 2)).truncated
     }
-    is(3) {
+    is(2) {
       weights(0) := weights(0) - samples(0)
       weights(1) := weights(1) - samples(3)
     }
   }
 
-  when (stage === 3) {
-    weightsValid := busy
+  when(stage === 2) {
+    outputValid := True
+  }
+
+  when (io.output.ready & outputValid) {
+    outputValid := False
     busy := False
   }
 
-  when (io.samples.valid & !busy) {
-    busy := True
-    samples := io.samples.payload
-    stage := 0
-  }
-
-  io.weights.payload := weights
-  io.weights.valid := weightsValid
+  io.output.payload := output
+  io.output.valid := outputValid
 }
 

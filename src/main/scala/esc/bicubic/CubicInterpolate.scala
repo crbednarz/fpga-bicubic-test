@@ -22,23 +22,24 @@ case class MultiplyAdd() extends Component {
 
 case class CubicInterpolate() extends Component {
   val io = new Bundle {
-    val weights = in Vec(SFix(3 exp, 16 bits), 4)
-    val delta = in SFix(3 exp, 16 bits)
-    val inputValid = in Bool
-
-    val busy = out Bool
-    val output = master Flow(SFix(3 exp, 16 bits))
+    val input = slave Stream(CubicParam())
+    val output = master Stream(SFix(3 exp, 16 bits))
   }
 
+  val busy = RegInit(False)
   val weights = Reg(Vec(SFix(3 exp, 16 bits), 4))
   val delta = Reg(SFix(3 exp, 16 bits))
+  val stage = Reg(UInt(2 bits)) init(3)
+  val outputValid = RegInit(False)
 
   val multiplyAdd = MultiplyAdd()
   multiplyAdd.io.a := delta
   multiplyAdd.io.b := weights(0)
-  weights(0) := multiplyAdd.io.output
+  when (stage < 3) {
+    weights(0) := multiplyAdd.io.output
+  }
 
-  val stage = Reg(UInt(2 bits)) init(0)
+  io.input.ready := !busy
 
   switch (stage) {
     is (0) {
@@ -50,41 +51,28 @@ case class CubicInterpolate() extends Component {
     }
     is (2) {
       multiplyAdd.io.c := weights(3)
+      outputValid := True
     }
     is (3) {
       multiplyAdd.io.c := 0
     }
   }
-  stage := stage + 1
-
-  val busy = RegInit(False)
-  io.busy := busy
-
-  val outputValid = RegNext(False) init(False)
-  when (stage === 2) {
-    outputValid := busy
-    busy := False
+  when (stage < 3) {
+    stage := stage + 1
   }
 
-  when (!busy && io.inputValid) {
-    weights := io.weights
+  when (!busy && io.input.valid) {
+    weights := io.input.samples
+    delta := io.input.delta
     stage := 0
-    delta := io.delta
     busy := True
   }
 
+  when (io.output.ready & outputValid) {
+    outputValid := False
+    busy := False
+  }
 
   io.output.valid := outputValid
   io.output.payload := weights(0)
-}
-
-
-object ProjectConfig extends SpinalConfig(
-  defaultConfigForClockDomains = ClockDomainConfig(resetKind = BOOT),
-  defaultClockDomainFrequency = FixedFrequency(12 MHz))
-
-object CubicInterpolateMain {
-  def main(args: Array[String]) {
-    ProjectConfig.generateVerilog(new CubicInterpolate).printPruned()
-  }
 }

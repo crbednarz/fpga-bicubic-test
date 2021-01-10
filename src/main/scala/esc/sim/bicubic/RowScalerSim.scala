@@ -9,7 +9,7 @@ import spinal.lib._
 object RowScalerSim {
   class RowScalerDut(sourceSize: Int, destSize: Int) extends Component {
     val io = new Bundle {
-      val output = master Stream(CubicInput())
+      val output = master Stream(CubicParam())
     }
 
     val index = Reg(SInt(16 bits)) init(0)

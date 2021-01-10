@@ -34,15 +34,16 @@ object BicubicUpscalerSim {
   def main(args: Array[String]) {
     val sourceWidth = 5
     val sourceHeight = 5
-    val destWidth = 22
-    val destHeight = 22
+    val destWidth = 42
+    val destHeight = 42
     val xIncrement = ((sourceWidth / (destWidth - 1.0)) * 0x10000).toInt
     val yIncrement = ((sourceHeight / (destHeight - 1.0)) * 0x10000).toInt
 
     val sourceImage = Array.ofDim[Int](sourceHeight, sourceWidth)
+    val outputImage = new Array[Int](destWidth * destHeight)
     for (y <- 0 until sourceHeight) {
       for (x <- 0 until sourceWidth) {
-        sourceImage(y)(x) = Random.nextInt(0xFFF)
+        sourceImage(y)(x) = if (((x % 2) ^ (y % 2))  == 0) 0x3FF else 0xBFF //Random.nextInt(0xFFF)
       }
     }
 
@@ -68,19 +69,19 @@ object BicubicUpscalerSim {
         i += 1
       }
 
-
-      println(s"For $xIndex, $yIndex. Delta: $xDelta, $yDelta")
-      for (y <- yIndex - 1 to yIndex + 2) {
-        for (x <- xIndex - 1 to xIndex + 2) {
-          val sample = sourceImage(clampY(y))(clampX(x))
-          print(f"$sample%6d ")
-        }
-        println("")
-      }
-      println(values.mkString(" "))
+//
+//      println(s"For $xIndex, $yIndex. Delta: $xDelta, $yDelta")
+//      for (y <- yIndex - 1 to yIndex + 2) {
+//        for (x <- xIndex - 1 to xIndex + 2) {
+//          val sample = sourceImage(clampY(y))(clampX(x))
+//          print(f"$sample%6d ")
+//        }
+//        println("")
+//      }
+//      println(values.mkString(" "))
 
       val result = BicubicUtil.calculateCubic(values, xDelta >> 4)
-      println(s"Result: $result")
+//      println(s"Result: $result")
       result
     }
 
@@ -106,7 +107,7 @@ object BicubicUpscalerSim {
               val actual = dut.io.output.payload.raw.toInt
 
               assert(actual == expected, s"For {$x, $y, $z} Expected: $expected Actual: $actual")
-
+              outputImage(y * destWidth + x) = actual
               sourceX += xIncrement
               if (z > 0) {
                 dut.io.output.ready #= false
@@ -122,6 +123,7 @@ object BicubicUpscalerSim {
           dut.clockDomain.waitSampling()
           dut.io.enable #= false
         }
+//        println(outputImage.mkString(", "))
       }
   }
 }

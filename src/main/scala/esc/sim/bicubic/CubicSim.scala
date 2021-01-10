@@ -13,6 +13,9 @@ object CubicSim {
       .withWave
       .doSim(new Cubic()) { dut =>
         dut.clockDomain.forkStimulus(period = 10)
+        dut.io.input.valid #= false
+        dut.io.output.ready #= true
+        dut.clockDomain.waitSampling()
 
         for(idx <- 0 to 100) {
           val samples = BicubicUtil.randomSamples()
@@ -23,14 +26,17 @@ object CubicSim {
           }
           dut.io.input.delta.raw #= delta
           dut.io.input.valid #= true
-          dut.io.output.ready #= true
           dut.clockDomain.waitSampling()
           dut.io.input.valid #= false
-          dut.clockDomain.waitSampling(11)
+
+          while (!dut.io.output.valid.toBoolean) {
+            dut.clockDomain.waitSampling()
+          }
 
           val expected = BicubicUtil.calculateCubic(samples, delta)
-          assert(dut.io.output.valid.toBoolean)
           assert(dut.io.output.payload.raw.toInt == expected)
+
+          dut.clockDomain.waitSampling()
         }
       }
   }

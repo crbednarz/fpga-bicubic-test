@@ -7,7 +7,7 @@ import spinal.lib._
 case class SourceReader(sourceWidth: Int, sourceHeight: Int, destWidth: Int, destHeight: Int) extends Component {
   val io = new Bundle {
     val source = master(FrameRead(UInt(12 bits), sourceWidth, sourceHeight))
-    val output = master Stream(CubicInput())
+    val output = master Stream(CubicParam())
 
     val enable = in Bool
   }

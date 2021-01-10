@@ -10,7 +10,7 @@ import spinal.core.sim._
 object SourceReaderSim {
   class SourceReaderDut(sourceWidth: Int, sourceHeight: Int, destWidth: Int, destHeight: Int) extends Component {
     val io = new Bundle {
-      val output = master Stream(CubicInput())
+      val output = master Stream(CubicParam())
       val enable = in Bool()
     }
 
