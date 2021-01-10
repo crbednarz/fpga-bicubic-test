@@ -5,7 +5,7 @@ import spinal.lib._
 import spinal.lib.fsm._
 import spinal.lib.io._
 
-case class FrameWrite[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt, channels: BigInt = 1) extends Bundle with IMasterSlave {
+case class FrameWrite[T <: Data](wordType: HardType[T], width: Int, height: Int, channels: Int = 1) extends Bundle with IMasterSlave {
   def addressWidth = log2Up(width * height * channels)
 
   val data: T = wordType()
@@ -18,7 +18,7 @@ case class FrameWrite[T <: Data](wordType: HardType[T], width: BigInt, height: B
 }
 
 
-case class FrameRead[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt, channels: BigInt = 1) extends Bundle with IMasterSlave {
+case class FrameRead[T <: Data](wordType: HardType[T], width: Int, height: Int, channels: Int = 1) extends Bundle with IMasterSlave {
   def addressWidth = log2Up(width * height * channels)
 
   val data: T = wordType()
@@ -30,7 +30,7 @@ case class FrameRead[T <: Data](wordType: HardType[T], width: BigInt, height: Bi
   }
 }
 
-case class Frame[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt, channels: BigInt = 1) extends Component {
+case class Frame[T <: Data](wordType: HardType[T], width: Int, height: Int, channels: Int = 1) extends Component {
   def frameWriteType: HardType[FrameWrite[T]] = FrameWrite(wordType, width, height, channels)
   def frameReadType: HardType[FrameRead[T]] = FrameRead(wordType, width, height, channels)
 
@@ -51,4 +51,31 @@ case class Frame[T <: Data](wordType: HardType[T], width: BigInt, height: BigInt
   }
 
   io.output.data := buffer(io.output.address)
+}
+
+case class DoubleFrame[T <: Data](wordType: HardType[T], width: Int, height: Int, channels: Int = 1) extends Component {
+  def frameWriteType: HardType[FrameWrite[T]] = FrameWrite(wordType, width, height, channels)
+  def frameReadType: HardType[FrameRead[T]] = FrameRead(wordType, width, height, channels)
+
+  val io = new Bundle {
+    val input = slave(frameWriteType())
+    val output = slave(frameReadType())
+    val swap = in Bool()
+  }
+
+  val swapped = RegInit(False)
+
+  when (io.swap.rise) {
+    swapped := ~swapped
+  }
+
+  val ram = DualSPRAM()
+  ram.io.swapped := swapped
+  io.output.data := ram.io.read.dataOut.resize(12 bits).as(wordType)
+  ram.io.read.address := io.output.address.resized
+  ram.io.read.enable := True
+
+  ram.io.write.dataIn := io.input.data.as(UInt(12 bits)).resized
+  ram.io.write.address := io.input.address.resized
+  ram.io.write.enable := io.input.valid
 }

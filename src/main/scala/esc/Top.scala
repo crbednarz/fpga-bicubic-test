@@ -5,22 +5,18 @@ import spinal.core._
 import spinal.lib.Reverse
 import spinal.lib.com.uart._
 
+import scala.util.Random
 import sys.process._
 
 class Top extends Component {
   val io = new Bundle {
-    val led = new Bundle {
-      val r = out Bool
-      val g = out Bool
-      val b = out Bool
-    }
     val i2c = new Bundle {
       val sda = inout(Analog(Bool()))
       val scl = out Bool()
     }
     val display = out(DisplayIo())
   }
-/*
+
   val clockControl = new Area {
     val pll = PLL30MHz()
     pll.io.clockIn := ClockDomain.current.readClockWire
@@ -31,12 +27,7 @@ class Top extends Component {
     domain.clock := pll.io.clockOut
   }
 
-  val core = new ClockingArea(clockControl.domain) {*/
-  val core = new Area {
-    io.led.r := True
-    io.led.g := True
-    io.led.b := True
-
+  val core = new ClockingArea(clockControl.domain) {
     val sda = TriStateIO()
     sda.io.pin := io.i2c.sda
 
@@ -48,7 +39,7 @@ class Top extends Component {
     val frame = Frame(UInt(12 bits), 8, 8)
     frame.io.input <> camera.io.output
 
-    val upscaler = BicubicUpscaler(8, 8, 256, 256)
+    val upscaler = BicubicUpscaler(8, 8, 320, 320)
     frame.io.output <> upscaler.io.source
     upscaler.io.enable := camera.io.frameComplete
 

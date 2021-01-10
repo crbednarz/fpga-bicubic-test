@@ -1,0 +1,20 @@
+set_io clk 35
+
+set_io io_i2c_sda 28
+set_io io_i2c_scl 32
+
+set_io io_display_data[0] 4
+set_io io_display_data[1] 2
+set_io io_display_data[2] 47
+set_io io_display_data[3] 45
+set_io io_display_data[4] 3
+set_io io_display_data[5] 48
+set_io io_display_data[6] 46
+set_io io_display_data[7] 44
+
+set_io io_display_write 43
+set_io io_display_cd 38
+set_io io_display_cs 34
+
+set_io io_display_read 36
+set_io io_display_reset 42

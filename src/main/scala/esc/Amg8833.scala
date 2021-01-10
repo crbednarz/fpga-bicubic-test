@@ -31,7 +31,7 @@ case class Amg8833() extends Component {
   io.output.valid := i2cReadValid
   io.output.data := i2cReadPayload(11 downto 0)
 
-  val i2cCtrl = I2cController(0x69, 200000 Hz)
+  val i2cCtrl = I2cController(0x69, 600000 Hz)
   i2cCtrl.io.enable := i2cEnable
   i2cCtrl.io.write.valid := i2cWriteValid
   i2cCtrl.io.write.payload := i2cWritePayload
@@ -40,7 +40,7 @@ case class Amg8833() extends Component {
   io.scl <> i2cCtrl.io.scl
   io.sda <> i2cCtrl.io.sda
 
-  val frameComplete = RegNext(False)
+  val frameComplete = RegNext(False) init(False)
   io.frameComplete := frameComplete
 
   val initSequence = Mem(UInt(8 bits), initialContent = Array(
@@ -168,7 +168,7 @@ case class Amg8833() extends Component {
     val waitForReadState : State = new State {
       whenIsActive {
         when (~i2cCtrl.io.busy) {
-          goto(beginRequestState)
+          goto(frameDelayState)
         }
       }
     }

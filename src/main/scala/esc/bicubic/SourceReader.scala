@@ -44,7 +44,6 @@ case class SourceReader(sourceWidth: Int, sourceHeight: Int, destWidth: Int, des
   rowReader.io.sourceIndex := sourceIndex
   rowReader.io.sourceIncMask := mask
   rowReader.io.enable := enableReader
-  // need to fix issue where y goes up instead of changing mask.
 
   when (rowReader.io.busy.fall & busy) {
     index := nextIndex

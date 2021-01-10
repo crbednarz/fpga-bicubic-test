@@ -21,7 +21,7 @@ case class ScaledIndex(sourceSize: Int, destSize: Int, sourceOffset: BigDecimal 
 
   def start(): ScaledIndex = {
     val result = ScaledIndex(sourceSize, destSize, sourceOffset)
-    result.sourceIndex := 0.5
+    result.sourceIndex := sourceOffset
     result.destIndex := 0
     result.sourceChanged := True
     result.end := False

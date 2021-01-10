@@ -13,24 +13,35 @@ case class ColorScale() extends Component {
     val output = master Stream(Rgb(8, 8, 8))
   }
 
-  val outputValid = RegInit(False)
-  io.output.valid := outputValid
+  io.output.ready <> io.input.ready
+  io.output.valid <> io.input.valid
 
-  val canOutput = (!outputValid | io.output.ready) & io.input.valid
+  val color = Rgb(8, 8, 8)
+  io.output.payload := color
 
-  val inputReady = RegInit(False)
-  io.input.ready := canOutput
+  val scale = io.input.payload.raw(5 downto 0).asUInt << 2
+  val invScale = ~scale
 
-  val outputValue = Reg(Rgb(8, 8, 8))
-  io.output.payload := outputValue
-
-  when (canOutput) {
-    outputValid := True
-
-    outputValue.r := io.input.payload.raw(8 downto 1).asUInt
-    outputValue.g := io.input.payload.raw(8 downto 1).asUInt
-    outputValue.b := io.input.payload.raw(8 downto 1).asUInt
-  }.elsewhen(io.output.ready) {
-    outputValid := False
+  switch (io.input.payload.raw(7 downto 6).asUInt) {
+    is (U("b00")) {
+      color.r := 0
+      color.g := 0
+      color.b := scale
+    }
+    is (U("b01")) {
+      color.r := 0
+      color.g := scale
+      color.b := invScale
+    }
+    is (U("b10")) {
+      color.r := scale
+      color.g := invScale
+      color.b := 0
+    }
+    is (U("b11")) {
+      color.r := 0xFF
+      color.g := scale
+      color.b := scale
+    }
   }
 }

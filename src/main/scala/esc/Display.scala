@@ -27,7 +27,7 @@ case class DisplayMessage() extends Bundle {
 }
 
 object DataMessage {
-  def apply(data: BigInt, hasDelay: Bool = False): DisplayMessage = {
+  def apply(data: Int, hasDelay: Bool = False): DisplayMessage = {
     val message = DisplayMessage()
     message.data := data
     message.mode := MessageMode.DATA
@@ -38,7 +38,7 @@ object DataMessage {
 
 
 object CommandMessage {
-  def apply(data: BigInt, hasDelay: Bool = False): DisplayMessage = {
+  def apply(data: Int, hasDelay: Bool = False): DisplayMessage = {
     val message = DisplayMessage()
     message.data := data
     message.mode := MessageMode.COMMAND
@@ -126,13 +126,13 @@ case class DisplayInitializer() extends Component
     CommandMessage(CMD_CASET),
     DataMessage(0x00),
     DataMessage(0x00),
-    DataMessage(0x00),
-    DataMessage(0xFF),
+    DataMessage(0x01),
+    DataMessage(0x3F),
     CommandMessage(CMD_PASET),
     DataMessage(0x00),
     DataMessage(0x00),
-    DataMessage(0x00),
-    DataMessage(0xFF)
+    DataMessage(0x01),
+    DataMessage(0x3F)
   ))
 
   val delay = new Area {
@@ -167,7 +167,7 @@ case class DisplayInitializer() extends Component
   io.output.payload := message
 
   val nextMessageIndex = messageIndex + 1
-  val nextMessage = sequence.readSync(nextMessageIndex)
+  val nextMessage = sequence(nextMessageIndex)
 
   when (delay.active) {
     when (io.output.ready) {
@@ -193,27 +193,26 @@ case class Display() extends Component {
 
     val colorStream = slave Stream(Rgb(8, 8, 8))
   }
-
-  val WIDTH = 256
-  val HEIGHT = 256
+  val WIDTH = 320
+  val HEIGHT = 320
   val PIXELS = WIDTH * HEIGHT
 
   io.display.read := True
   io.display.reset := True
 
-  val chipSelect = Reg(Bool()) init(True)
+  val chipSelect = RegInit(True)
   io.display.cs := chipSelect
 
   val mode = Reg(MessageMode()) init(MessageMode.DATA)
   io.display.cd := mode === MessageMode.DATA
 
-  val write = Reg(Bool()) init(False)
-  io.display.write := ~(write & ClockDomain.current.readClockWire)
+  val write = RegInit(False)
+  io.display.write := write & ~(ClockDomain.current.readClockWire)
 
   val data = Reg(UInt(8 bits)) init(0)
   io.display.data := data
 
-  val colorStreamReady = RegNext(False)
+  val colorStreamReady = RegNext(False) init(False)
   io.colorStream.ready := colorStreamReady
 
 
@@ -246,12 +245,10 @@ case class Display() extends Component {
     val drawSetupState : State = new State {
       whenIsActive {
         mode := MessageMode.COMMAND
-
         data := 0x2C
         goto(drawState)
       }
     }
-
 
     val drawState : State = new State {
       onEntry {
@@ -260,23 +257,27 @@ case class Display() extends Component {
       whenIsActive {
         mode := MessageMode.DATA
 
-        channelCount := channelCount + 1
-        switch(channelCount) {
-          is(0) {
-            data := io.colorStream.payload.r
+        when (io.colorStream.valid) {
+          channelCount := channelCount + 1
+          switch(channelCount) {
+            is(0) {
+              data := io.colorStream.payload.r
+            }
+            is(1) {
+              data := io.colorStream.payload.g
+              colorStreamReady := True
+            }
+            is(2) {
+              data := io.colorStream.payload.b
+              channelCount := 0
+            }
           }
-          is(1) {
-            data := io.colorStream.payload.g
+          byteIndex := byteIndex + 1
+          when(byteIndex === PIXELS * 3 - 1) {
+            goto(drawSetupState)
           }
-          is(2) {
-            data := io.colorStream.payload.b
-            colorStreamReady := True
-            channelCount := 0
-          }
-        }
-        byteIndex := byteIndex + 1
-        when(byteIndex === PIXELS * 3 - 1) {
-          goto(drawSetupState)
+        } otherwise {
+          write := False
         }
       }
     }

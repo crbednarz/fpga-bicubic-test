@@ -15,7 +15,9 @@ case class MultiplyAdd() extends Component {
     val output = out SFix(3 exp, 16 bits)
   }
 
-  io.output := (io.a * io.b + io.c).truncated
+  val output = SFix(3 exp, 16 bits)
+  output := (io.a * io.b).truncated
+  io.output := output + io.c
 }
 
 case class CubicInterpolate() extends Component {

@@ -91,6 +91,8 @@ object BicubicUpscalerSim {
         dut.io.output.ready #= true
         dut.clockDomain.waitSampling(2)
         dut.io.enable #= true
+        dut.clockDomain.waitSampling()
+        dut.io.enable #= false
 
         for (z <- 0 until 1) {
           var sourceY = 0x8000
@@ -98,7 +100,7 @@ object BicubicUpscalerSim {
             var sourceX = 0x8000
             for (x <- 0 until destWidth) {
               while (!dut.io.output.valid.toBoolean) {
-                dut.clockDomain.waitSampling(1)
+                dut.clockDomain.waitSampling(if (z > 0) 2 else 1)
               }
               val expected = bicubic(sourceX, sourceY)
               val actual = dut.io.output.payload.raw.toInt
@@ -106,10 +108,19 @@ object BicubicUpscalerSim {
               assert(actual == expected, s"For {$x, $y, $z} Expected: $expected Actual: $actual")
 
               sourceX += xIncrement
+              if (z > 0) {
+                dut.io.output.ready #= false
+                dut.clockDomain.waitSampling(2)
+                dut.io.output.ready #= true
+              }
               dut.clockDomain.waitSampling()
             }
             sourceY += yIncrement
           }
+
+          dut.io.enable #= true
+          dut.clockDomain.waitSampling()
+          dut.io.enable #= false
         }
       }
   }
