@@ -19,10 +19,10 @@ case class ColorScale() extends Component {
   val color = Rgb(8, 8, 8)
   io.output.payload := color
 
-  val scale = io.input.payload.raw(5 downto 0).asUInt << 2
+  val scale = io.input.payload.raw(7 downto 0).asUInt
   val invScale = ~scale
 
-  switch (io.input.payload.raw(7 downto 6).asUInt) {
+  switch (io.input.payload.raw(9 downto 8).asUInt) {
     is (U("b00")) {
       color.r := 0
       color.g := 0

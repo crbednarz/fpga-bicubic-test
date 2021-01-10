@@ -29,7 +29,10 @@ case class Amg8833() extends Component {
   val i2cReadAddress = Reg(UInt(6 bits)) init(0)
   io.output.address := i2cReadAddress
   io.output.valid := i2cReadValid
-  io.output.data := i2cReadPayload(11 downto 0)
+
+  // In normal conditions only the first 10~ bits are used.
+  // Shifting allows for a bit more precision later in the process.
+  io.output.data := i2cReadPayload(9 downto 0) << 2
 
   val i2cCtrl = I2cController(0x69, 600000 Hz)
   i2cCtrl.io.enable := i2cEnable
